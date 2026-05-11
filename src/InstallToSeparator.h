@@ -45,6 +45,9 @@ public:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
+private slots:
+    void markNextInstallDragPositioned();
+
 private:
     struct SeparatorChoice {
         QString internalName;
@@ -59,6 +62,7 @@ private:
     [[nodiscard]] int targetPriorityFor(const QString& separatorName) const;
     [[nodiscard]] bool isTargetDialog(const QWidget* widget) const;
     [[nodiscard]] QAbstractItemModel* sourceModListModel() const;
+    void connectDragInstallSignals();
     bool decorateDialog(QDialog* dialog);
     bool moveModThroughMo2Model(const QString& modName, int targetPriority) const;
     void rememberSeparator(const QString& separatorName) const;
@@ -67,6 +71,8 @@ private:
     MOBase::IOrganizer* m_Organizer {};
     QPointer<QMainWindow> m_MainWindow;
     bool m_EventFilterInstalled {};
+    bool m_DragInstallSignalsConnected {};
+    int m_PendingDragPositionedInstalls {};
     bool m_TargetingActive {};
     bool m_HasPendingSeparator {};
     QString m_PendingSeparator;

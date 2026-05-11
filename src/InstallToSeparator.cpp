@@ -303,6 +303,7 @@ bool InstallToSeparator::init(MOBase::IOrganizer* organizer) {
 
     m_Organizer->onUserInterfaceInitialized([this](QMainWindow* mainWindow) {
         m_MainWindow = mainWindow;
+        connectDragInstallSignals();
         if (!m_EventFilterInstalled && qApp != nullptr) {
             qApp->installEventFilter(this);
             m_EventFilterInstalled = true;
@@ -363,7 +364,13 @@ void InstallToSeparator::onInstallationStart(
     m_SelectedSeparator.clear();
     m_PendingSeparator.clear();
     m_HasPendingSeparator = false;
-    m_TargetingActive = !reinstallation && currentMod == nullptr;
+
+    const bool dragPositionedInstall = m_PendingDragPositionedInstalls > 0;
+    if (dragPositionedInstall) {
+        --m_PendingDragPositionedInstalls;
+    }
+
+    m_TargetingActive = !dragPositionedInstall && !reinstallation && currentMod == nullptr;
 }
 
 void InstallToSeparator::onInstallationEnd(EInstallResult result, MOBase::IModInterface* newMod) {
@@ -597,6 +604,42 @@ QAbstractItemModel* InstallToSeparator::sourceModListModel() const {
         model = proxyModel->sourceModel();
     }
     return model;
+}
+
+void InstallToSeparator::connectDragInstallSignals() {
+    if (m_DragInstallSignalsConnected) {
+        return;
+    }
+
+    auto* sourceModel = sourceModListModel();
+    if (sourceModel == nullptr) {
+        qWarning() << "Install to Separator: could not find MO2 mod list model";
+        return;
+    }
+
+    const bool downloadConnected = QObject::connect(
+        sourceModel,
+        SIGNAL(downloadArchiveDropped(int, int)),
+        this,
+        SLOT(markNextInstallDragPositioned())
+    );
+    const bool externalConnected = QObject::connect(
+        sourceModel,
+        SIGNAL(externalArchiveDropped(QUrl, int)),
+        this,
+        SLOT(markNextInstallDragPositioned())
+    );
+
+    m_DragInstallSignalsConnected = downloadConnected && externalConnected;
+    if (!m_DragInstallSignalsConnected) {
+        qWarning() << "Install to Separator: could not monitor MO2 drag-to-install signals";
+    }
+}
+
+void InstallToSeparator::markNextInstallDragPositioned() {
+    if (m_PendingDragPositionedInstalls < std::numeric_limits<int>::max()) {
+        ++m_PendingDragPositionedInstalls;
+    }
 }
 
 bool InstallToSeparator::moveModThroughMo2Model(const QString& modName, int targetPriority) const {
