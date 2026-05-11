@@ -1,0 +1,44 @@
+{
+  "Name": "Install to Separator",
+  "Author": "GabonZ",
+  "Description": "Adds a separator picker to MO2 install dialogs and places new mods under the selected separator.",
+  "DocsUrl": "https://www.nexusmods.com/games/skyrimspecialedition/mods/179707",
+  "GithubUrl": "https://github.com/gabriel-andreescu/modorganizer-install_to_separator",
+  "NexusUrl": "https://www.nexusmods.com/games/skyrimspecialedition/mods/179707",
+  "Versions": [
+    {
+      "Version": "0.1.0.0",
+      "Released": "2026-05-11",
+      "MinSupport": "2.5.3",
+      "MaxSupport": "2.5.3",
+      "MinWorking": "2.5.3",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-install_to_separator/releases/download/0.1.0/Install.To.Separator.MO2-2.5.3beta11.zip",
+      "PluginPath": [
+        "install_to_separator.dll"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": [
+        "Initial release."
+      ]
+    },
+    {
+      "Version": "0.1.0.0",
+      "Released": "2026-05-11",
+      "MinSupport": "2.5.2",
+      "MaxSupport": "2.5.2",
+      "MinWorking": "2.5.2",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-install_to_separator/releases/download/0.1.0/Install.To.Separator.MO2-2.5.2.zip",
+      "PluginPath": [
+        "install_to_separator.dll"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": [
+        "Initial release."
+      ]
+    }
+  ]
+}

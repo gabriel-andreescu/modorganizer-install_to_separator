@@ -1,0 +1,56 @@
+[size=4][color=#00ffff]Overview[/color][/size]
+Install to Separator adds a separator picker to MO2 install dialogs, so new mods can land directly under the separator you choose.
+
+
+[size=4][color=#00ffff]How it works[/color][/size]
+[list]
+[*]adds a Separator field to supported MO2 install dialogs[/*]
+[*]lets you keep MO2's normal behavior with "<default: end of list>"[/*]
+[*]filters separators as you type[/*]
+[*]requires an exact separator match before OK or Next can be pressed[/*]
+[*]shows separator colors in the dropdown[/*]
+[*]remembers the last selected separator per MO2 profile[/*]
+[*]does not reposition reinstalls, merges, or replacements[/*]
+[/list]
+
+
+[size=4][color=#00ffff]Supported dialogs[/color][/size]
+[list]
+[*]Quick Install[/*]
+[*]XML FOMOD installer[/*]
+[*]C# FOMOD installer[/*]
+[*]BAIN Installer[/*]
+[*]BAIN Wizard Installer[/*]
+[*]Manual "Install Mods" dialog[/*]
+[/list]
+
+If you choose Manual from Quick Install or FOMOD, the Manual dialog keeps the separator you already selected. You can still change it there before pressing OK.
+
+
+[size=4][color=#00ffff]Settings[/color][/size]
+You can turn the Separator field on or off for each supported dialog type in MO2's plugin settings. Remembering the last selected separator can also be disabled there.
+
+
+[size=4][color=#00ffff]Compatibility[/color][/size]
+Use the download that matches your Mod Organizer version:
+
+[list]
+[*]MO2 2.5.2: Install to Separator MO2-2.5.2[/*]
+[*]MO2 2.5.3beta11: Install to Separator MO2-2.5.3beta11[/*]
+[/list]
+
+Do not mix the two downloads. MO2 2.5.2 and MO2 2.5.3beta11 use different plugin ABIs.
+
+
+[size=4][color=#00ffff]Installation[/color][/size]
+Download the ZIP that matches your MO2 version, then extract it to the Mod Organizer plugins directory:
+
+[quote]<MO2 DIR>\plugins[/quote]
+
+
+[size=4][color=#00ffff]Notes[/color][/size]
+[list]
+[*]This plugin affects the left-pane mod list position only. It does not change plugin load order.[/*]
+[*]If the remembered separator no longer exists in the current profile, the picker returns to "<default: end of list>".[/*]
+[*]The separator picker is added through MO2's Qt dialogs, so future MO2 UI changes may require a plugin update.[/*]
+[/list]
