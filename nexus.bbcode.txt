@@ -18,6 +18,7 @@ Install to Separator adds a separator picker to MO2 install dialogs, so new mods
 [list]
 [*]Quick Install[/*]
 [*]XML FOMOD installer[/*]
+[*]FOMOD Plus installer[/*]
 [*]C# FOMOD installer[/*]
 [*]BAIN Installer[/*]
 [*]BAIN Wizard Installer[/*]
@@ -40,6 +41,8 @@ Use the download that matches your Mod Organizer version:
 [/list]
 
 Do not mix the two downloads. MO2 2.5.2 and MO2 2.5.3beta11 use different plugin ABIs.
+
+FOMOD Plus is supported when it is installed and enabled.
 
 
 [size=4][color=#00ffff]Installation[/color][/size]

@@ -28,6 +28,7 @@
 #include <QPen>
 #include <QPixmap>
 #include <QPushButton>
+#include <QSizePolicy>
 #include <QStyle>
 #include <QTreeView>
 #include <QVBoxLayout>
@@ -48,6 +49,8 @@ constexpr auto guardedComboProperty = "installToSeparatorGuardedCombo";
 constexpr auto invalidComboProperty = "installToSeparatorInvalid";
 constexpr auto buttonBlockedProperty = "installToSeparatorButtonBlocked";
 constexpr auto buttonBaseEnabledProperty = "installToSeparatorButtonBaseEnabled";
+constexpr auto fomodPlusDialogClassName = "FomodInstallerWindow";
+constexpr auto fomodPlusPluginName = "FOMOD Plus";
 constexpr auto modListObjectName = "modList";
 constexpr auto changeModsPrioritySlot = "changeModsPriority(QModelIndexList,int)";
 constexpr auto invalidComboStyleSheet = R"(
@@ -64,6 +67,18 @@ QComboBox#installToSeparatorCombo[installToSeparatorInvalid="true"]:focus {
 struct LayoutInsertionPoint {
     QBoxLayout* parent {};
     int index {};
+};
+
+struct DialogDecorationTargets {
+    LayoutInsertionPoint insertionPoint;
+    const QHBoxLayout* alignmentRow {};
+    QComboBox* nameCombo {};
+    QBoxLayout* fomodPlusMainLayout {};
+    QBoxLayout* fomodPlusLabelsColumn {};
+    QBoxLayout* fomodPlusValuesColumn {};
+    int fomodPlusNameComboIndex {-1};
+    int fomodPlusNameComboStretch {};
+    bool fomodPlusTopRow {};
 };
 
 QString displayNameForSeparator(MOBase::IModList* modList, const QString& internalName) {
@@ -126,6 +141,48 @@ QHBoxLayout* horizontalLayoutContainingWidget(QLayout* layout, const QWidget* wi
     return nullptr;
 }
 
+int directWidgetIndex(QBoxLayout* layout, const QWidget* widget) {
+    if (layout == nullptr || widget == nullptr) {
+        return -1;
+    }
+
+    for (int i = 0; i < layout->count(); ++i) {
+        auto* item = layout->itemAt(i);
+        if (item != nullptr && item->widget() == widget) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+QWidget* directChildWidgetContainingWidget(QBoxLayout* layout, const QWidget* widget, int* index = nullptr) {
+    if (layout == nullptr || widget == nullptr) {
+        return nullptr;
+    }
+
+    for (int i = 0; i < layout->count(); ++i) {
+        auto* item = layout->itemAt(i);
+        if (item == nullptr || item->widget() == nullptr) {
+            continue;
+        }
+
+        auto* child = item->widget();
+        if (child
+            == widget
+            || child->isAncestorOf(widget)
+            || horizontalLayoutContainingWidget(child->layout(), widget)
+            != nullptr) {
+            if (index != nullptr) {
+                *index = i;
+            }
+            return child;
+        }
+    }
+
+    return nullptr;
+}
+
 LayoutInsertionPoint insertionPointAfterLayout(QLayout* layout, const QLayout* target) {
     if (layout == nullptr || target == nullptr) {
         return {};
@@ -157,6 +214,18 @@ LayoutInsertionPoint insertionPointAfterLayout(QLayout* layout, const QLayout* t
     }
 
     return {};
+}
+
+LayoutInsertionPoint insertionPointAfterDirectChildContainingWidget(QBoxLayout* layout, const QWidget* widget) {
+    int index = -1;
+    if (directChildWidgetContainingWidget(layout, widget, &index) == nullptr || index < 0) {
+        return {};
+    }
+
+    return {
+        .parent = layout,
+        .index = index + 1,
+    };
 }
 
 void addNameAlignedRowWidgets(QHBoxLayout* row, QLabel* label, QComboBox* separatorCombo, const QHBoxLayout* nameRow) {
@@ -230,6 +299,17 @@ bool isAcceptAttempt(QEvent* event, const QComboBox* combo) {
     return keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Space;
 }
 
+bool matchesFallbackAcceptText(const QPushButton* button) {
+    if (button == nullptr) {
+        return false;
+    }
+
+    QString text = button->text();
+    text.remove('&');
+    text = text.trimmed();
+    return text == QStringLiteral("Next") || text == QStringLiteral("Install");
+}
+
 QList<QPushButton*> acceptButtonsFor(QDialog* dialog) {
     QList<QPushButton*> buttons;
     for (const auto& objectName : {QStringLiteral("okBtn"), QStringLiteral("nextBtn"), QStringLiteral("okButton")}) {
@@ -237,6 +317,17 @@ QList<QPushButton*> acceptButtonsFor(QDialog* dialog) {
             buttons.append(button);
         }
     }
+
+    if (!buttons.isEmpty()) {
+        return buttons;
+    }
+
+    for (auto* button : dialog->findChildren<QPushButton*>()) {
+        if ((button->isDefault() || button->autoDefault()) && matchesFallbackAcceptText(button)) {
+            buttons.append(button);
+        }
+    }
+
     return buttons;
 }
 
@@ -287,6 +378,165 @@ void updateAcceptButtons(QComboBox* combo, const QList<QPushButton*>& buttons) {
         }
     }
 }
+
+QComboBox* firstEditableComboBox(QWidget* widget) {
+    if (widget == nullptr) {
+        return nullptr;
+    }
+
+    for (auto* combo : widget->findChildren<QComboBox*>()) {
+        if (combo
+            != nullptr
+            && combo->isEditable()
+            && combo->objectName()
+            != QStringLiteral("installToSeparatorCombo")) {
+            return combo;
+        }
+    }
+
+    return nullptr;
+}
+
+QString dialogDescription(const QDialog* dialog) {
+    if (dialog == nullptr) {
+        return {};
+    }
+
+    if (!dialog->objectName().isEmpty()) {
+        return dialog->objectName();
+    }
+
+    return QString::fromLatin1(dialog->metaObject()->className());
+}
+
+bool isFomodPlusInstallerDialog(const QWidget* widget, const MOBase::IOrganizer* organizer) {
+    if (widget
+        == nullptr
+        || organizer
+        == nullptr
+        || !organizer->isPluginEnabled(QString::fromLatin1(fomodPlusPluginName))) {
+        return false;
+    }
+
+    return QString::fromLatin1(widget->metaObject()->className()) == QString::fromLatin1(fomodPlusDialogClassName);
+}
+
+DialogDecorationTargets stockInstallDialogTargets(QDialog* dialog) {
+    auto* layout = dialog->findChild<QVBoxLayout*>("verticalLayout");
+    auto* nameCombo = dialog->findChild<QComboBox*>("nameCombo");
+    auto* nameRow = horizontalLayoutContainingWidget(layout, nameCombo);
+    return {
+        .insertionPoint = insertionPointAfterLayout(layout, nameRow),
+        .alignmentRow = nameRow,
+        .nameCombo = nameCombo,
+    };
+}
+
+DialogDecorationTargets fomodPlusDialogTargets(QDialog* dialog) {
+    auto* layout = qobject_cast<QBoxLayout*>(dialog->layout());
+    auto* nameCombo = firstEditableComboBox(dialog);
+    auto* topLevelWidget = directChildWidgetContainingWidget(layout, nameCombo);
+    auto* mainLayout = topLevelWidget != nullptr ? qobject_cast<QBoxLayout*>(topLevelWidget->layout()) : nullptr;
+    auto* metadataLayout = mainLayout != nullptr && mainLayout->count() > 0 ? mainLayout->itemAt(0)->layout() : nullptr;
+    auto* labelsColumn = metadataLayout != nullptr && metadataLayout->count() > 0
+                             ? qobject_cast<QBoxLayout*>(metadataLayout->itemAt(0)->layout())
+                             : nullptr;
+    auto* valuesColumn = metadataLayout != nullptr && metadataLayout->count() > 1
+                             ? qobject_cast<QBoxLayout*>(metadataLayout->itemAt(1)->layout())
+                             : nullptr;
+    const int nameComboIndex = directWidgetIndex(mainLayout, nameCombo);
+    return {
+        .insertionPoint = insertionPointAfterDirectChildContainingWidget(layout, nameCombo),
+        .alignmentRow = topLevelWidget != nullptr ? qobject_cast<QHBoxLayout*>(topLevelWidget->layout()) : nullptr,
+        .nameCombo = nameCombo,
+        .fomodPlusMainLayout = mainLayout,
+        .fomodPlusLabelsColumn = labelsColumn,
+        .fomodPlusValuesColumn = valuesColumn,
+        .fomodPlusNameComboIndex = nameComboIndex,
+        .fomodPlusNameComboStretch = nameComboIndex >= 0 && mainLayout != nullptr ? mainLayout->stretch(nameComboIndex)
+                                                                                  : 0,
+        .fomodPlusTopRow = true,
+    };
+}
+
+bool hasDecorationTargets(const DialogDecorationTargets& targets) {
+    if (targets.fomodPlusTopRow) {
+        return targets.nameCombo
+               != nullptr
+               && targets.fomodPlusMainLayout
+               != nullptr
+               && targets.fomodPlusLabelsColumn
+               != nullptr
+               && targets.fomodPlusValuesColumn
+               != nullptr
+               && targets.fomodPlusNameComboIndex
+               >= 0;
+    }
+
+    return targets.insertionPoint.parent != nullptr && targets.nameCombo != nullptr && targets.alignmentRow != nullptr;
+}
+
+void setFirstWidgetMinimumHeight(QBoxLayout* layout, int height) {
+    if (layout == nullptr || layout->count() == 0) {
+        return;
+    }
+
+    auto* item = layout->itemAt(0);
+    if (item == nullptr || item->widget() == nullptr) {
+        return;
+    }
+
+    item->widget()->setMinimumHeight(height);
+}
+
+void matchFomodPlusLabelPadding(QLabel* label) {
+    if (label == nullptr) {
+        return;
+    }
+
+    label->setContentsMargins(0, 0, 0, 0);
+    label->setStyleSheet("padding: 0px; margin: 0px;");
+}
+
+void insertFomodPlusTopRowSeparator(const DialogDecorationTargets& targets, QLabel* label, QComboBox* separatorCombo) {
+    const int rowHeight = std::max(targets.nameCombo->sizeHint().height(), separatorCombo->sizeHint().height());
+    setFirstWidgetMinimumHeight(targets.fomodPlusLabelsColumn, rowHeight);
+    setFirstWidgetMinimumHeight(targets.fomodPlusValuesColumn, rowHeight);
+    matchFomodPlusLabelPadding(label);
+    label->setMinimumHeight(rowHeight);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    auto* spacerLabel = new QLabel(separatorCombo->parentWidget());
+    matchFomodPlusLabelPadding(spacerLabel);
+    spacerLabel->setMinimumHeight(rowHeight);
+
+    targets.fomodPlusLabelsColumn->insertWidget(1, label);
+    targets.fomodPlusValuesColumn->insertWidget(1, spacerLabel);
+
+    auto* fieldWidget = new QWidget(separatorCombo->parentWidget());
+    fieldWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+
+    auto* fieldLayout = new QVBoxLayout(fieldWidget);
+    fieldLayout->setContentsMargins(0, 0, 0, 0);
+    fieldLayout->setSpacing(targets.fomodPlusLabelsColumn->spacing());
+    targets.fomodPlusMainLayout->removeWidget(targets.nameCombo);
+    fieldLayout->addWidget(targets.nameCombo);
+    fieldLayout->addWidget(separatorCombo);
+    targets.fomodPlusMainLayout
+        ->insertWidget(targets.fomodPlusNameComboIndex, fieldWidget, std::max(1, targets.fomodPlusNameComboStretch));
+    targets.fomodPlusMainLayout->setAlignment(fieldWidget, Qt::AlignTop);
+}
+
+void insertSeparatorWidgets(const DialogDecorationTargets& targets, QLabel* label, QComboBox* separatorCombo) {
+    if (targets.fomodPlusTopRow) {
+        insertFomodPlusTopRowSeparator(targets, label, separatorCombo);
+        return;
+    }
+
+    auto* row = new QHBoxLayout();
+    addNameAlignedRowWidgets(row, label, separatorCombo, targets.alignmentRow);
+    targets.insertionPoint.parent->insertLayout(targets.insertionPoint.index, row);
+}
 }
 
 InstallToSeparator::~InstallToSeparator() {
@@ -330,7 +580,7 @@ QString InstallToSeparator::description() const {
 }
 
 MOBase::VersionInfo InstallToSeparator::version() const {
-    return {0, 1, 0, 0, MOBase::VersionInfo::RELEASE_FINAL};
+    return {0, 1, 1, 0, MOBase::VersionInfo::RELEASE_FINAL};
 }
 
 QList<MOBase::PluginSetting> InstallToSeparator::settings() const {
@@ -492,7 +742,12 @@ bool InstallToSeparator::isTargetDialog(const QWidget* widget) const {
     }
 
     const auto dialog = Settings::dialogForObjectName(widget->objectName());
-    return Settings::dialogEnabled(m_Organizer, name(), dialog);
+    if (Settings::dialogEnabled(m_Organizer, name(), dialog)) {
+        return true;
+    }
+
+    return isFomodPlusInstallerDialog(widget, m_Organizer)
+           && Settings::dialogEnabled(m_Organizer, name(), Settings::Dialog::XmlFomod);
 }
 
 bool InstallToSeparator::decorateDialog(QDialog* dialog) {
@@ -500,18 +755,15 @@ bool InstallToSeparator::decorateDialog(QDialog* dialog) {
         return false;
     }
 
-    auto* layout = dialog->findChild<QVBoxLayout*>("verticalLayout");
-    auto* nameCombo = dialog->findChild<QComboBox*>("nameCombo");
-    auto* nameRow = horizontalLayoutContainingWidget(layout, nameCombo);
-    const auto insertionPoint = insertionPointAfterLayout(layout, nameRow);
-    if (layout == nullptr || nameCombo == nullptr || nameRow == nullptr || insertionPoint.parent == nullptr) {
-        qWarning() << "Install to Separator: could not decorate install dialog:" << dialog->objectName();
+    const auto targets = isFomodPlusInstallerDialog(dialog, m_Organizer) ? fomodPlusDialogTargets(dialog)
+                                                                         : stockInstallDialogTargets(dialog);
+    if (!hasDecorationTargets(targets)) {
+        qWarning() << "Install to Separator: could not decorate install dialog:" << dialogDescription(dialog);
         dialog->setProperty(decoratedProperty, true);
         return false;
     }
 
-    auto* row = new QHBoxLayout();
-    auto* label = new QLabel(tr("Separator"), dialog);
+    auto* label = new QLabel(targets.fomodPlusTopRow ? tr("Separator:") : tr("Separator"), dialog);
     auto* separatorCombo = new QComboBox(dialog);
     separatorCombo->setObjectName("installToSeparatorCombo");
     separatorCombo->setStyleSheet(invalidComboStyleSheet);
@@ -524,7 +776,6 @@ bool InstallToSeparator::decorateDialog(QDialog* dialog) {
     }
 
     label->setBuddy(separatorCombo);
-    addNameAlignedRowWidgets(row, label, separatorCombo, nameRow);
 
     const auto choices = separatorChoices();
     for (const auto& choice : choices) {
@@ -543,7 +794,8 @@ bool InstallToSeparator::decorateDialog(QDialog* dialog) {
     separatorCombo->setCurrentIndex(defaultIndex >= 0 ? defaultIndex : defaultOptionIndex);
     updatePendingSeparator(separatorCombo, m_PendingSeparator, m_HasPendingSeparator);
 
-    insertionPoint.parent->insertLayout(insertionPoint.index, row);
+    insertSeparatorWidgets(targets, label, separatorCombo);
+
     dialog->setProperty(decoratedProperty, true);
     dialog->setProperty(guardedComboProperty, QVariant::fromValue<QObject*>(separatorCombo));
 
