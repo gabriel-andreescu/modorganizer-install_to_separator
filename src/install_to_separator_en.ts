@@ -4,28 +4,33 @@
 <context>
     <name>InstallToSeparator</name>
     <message>
-        <location filename="InstallToSeparator.cpp" line="571"/>
+        <location filename="InstallToSeparator.cpp" line="574"/>
         <source>Install to Separator</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="InstallToSeparator.cpp" line="579"/>
+        <location filename="InstallToSeparator.cpp" line="582"/>
         <source>Adds a separator picker to MO2 install dialogs.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="InstallToSeparator.cpp" line="766"/>
+        <location filename="InstallToSeparator.cpp" line="800"/>
         <source>Separator</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="InstallToSeparator.cpp" line="766"/>
+        <location filename="InstallToSeparator.cpp" line="800"/>
         <source>Separator:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="InstallToSeparator.cpp" line="785"/>
+        <location filename="InstallToSeparator.cpp" line="740"/>
         <source>&lt;default: end of list&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="InstallToSeparator.cpp" line="740"/>
+        <source>&lt;default: top of list&gt;</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

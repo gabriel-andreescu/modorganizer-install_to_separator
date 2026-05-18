@@ -13,6 +13,7 @@ class QEvent;
 class QWidget;
 class QAbstractItemModel;
 class QMainWindow;
+class QTreeView;
 
 namespace MOBase {
 class IOrganizer;
@@ -59,6 +60,9 @@ private:
     [[nodiscard]] QString persistentKey() const;
     [[nodiscard]] QString rememberedSeparator() const;
     [[nodiscard]] bool rememberLastSeparator() const;
+    [[nodiscard]] QTreeView* modListView() const;
+    [[nodiscard]] bool modListPriorityDescending() const;
+    [[nodiscard]] QString defaultSeparatorLabel() const;
     [[nodiscard]] int targetPriorityFor(const QString& separatorName) const;
     [[nodiscard]] bool isTargetDialog(const QWidget* widget) const;
     [[nodiscard]] QAbstractItemModel* sourceModListModel() const;

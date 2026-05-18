@@ -14,6 +14,7 @@
 #include <QEvent>
 #include <QFont>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QIcon>
 #include <QKeyEvent>
 #include <QLabel>
@@ -52,6 +53,8 @@ constexpr auto buttonBaseEnabledProperty = "installToSeparatorButtonBaseEnabled"
 constexpr auto fomodPlusDialogClassName = "FomodInstallerWindow";
 constexpr auto fomodPlusPluginName = "FOMOD Plus";
 constexpr auto modListObjectName = "modList";
+// Matches MO2's internal ModList::COL_PRIORITY.
+constexpr int modListPriorityColumn = 9;
 constexpr auto changeModsPrioritySlot = "changeModsPriority(QModelIndexList,int)";
 constexpr auto invalidComboStyleSheet = R"(
 QComboBox#installToSeparatorCombo[installToSeparatorInvalid="true"] {
@@ -580,7 +583,7 @@ QString InstallToSeparator::description() const {
 }
 
 MOBase::VersionInfo InstallToSeparator::version() const {
-    return {0, 1, 1, 0, MOBase::VersionInfo::RELEASE_FINAL};
+    return {0, 1, 2, 0, MOBase::VersionInfo::RELEASE_FINAL};
 }
 
 QList<MOBase::PluginSetting> InstallToSeparator::settings() const {
@@ -691,6 +694,9 @@ QList<InstallToSeparator::SeparatorChoice> InstallToSeparator::separatorChoices(
             });
         }
     }
+    if (modListPriorityDescending()) {
+        std::ranges::reverse(choices);
+    }
     return choices;
 }
 
@@ -710,6 +716,30 @@ bool InstallToSeparator::rememberLastSeparator() const {
     return Settings::rememberLastSeparator(m_Organizer, name());
 }
 
+QTreeView* InstallToSeparator::modListView() const {
+    if (m_MainWindow.isNull()) {
+        return nullptr;
+    }
+
+    return m_MainWindow->findChild<QTreeView*>(modListObjectName);
+}
+
+bool InstallToSeparator::modListPriorityDescending() const {
+    auto* view = modListView();
+    if (view == nullptr || view->header() == nullptr) {
+        return false;
+    }
+
+    return view->header()->sortIndicatorSection()
+           == modListPriorityColumn
+           && view->header()->sortIndicatorOrder()
+           == Qt::DescendingOrder;
+}
+
+QString InstallToSeparator::defaultSeparatorLabel() const {
+    return modListPriorityDescending() ? tr("<default: top of list>") : tr("<default: end of list>");
+}
+
 int InstallToSeparator::targetPriorityFor(const QString& separatorName) const {
     if (m_Organizer == nullptr || m_Organizer->modList() == nullptr) {
         return -1;
@@ -719,6 +749,10 @@ int InstallToSeparator::targetPriorityFor(const QString& separatorName) const {
     const int separatorPriority = modList->priority(separatorName);
     if (separatorPriority < 0) {
         return -1;
+    }
+
+    if (modListPriorityDescending()) {
+        return separatorPriority;
     }
 
     for (const auto& modName : modList->allModsByProfilePriority()) {
@@ -777,12 +811,22 @@ bool InstallToSeparator::decorateDialog(QDialog* dialog) {
 
     label->setBuddy(separatorCombo);
 
+    const bool defaultOptionFirst = modListPriorityDescending();
+    int defaultOptionIndex = -1;
+    if (defaultOptionFirst) {
+        defaultOptionIndex = separatorCombo->count();
+        separatorCombo->addItem(defaultSeparatorLabel(), QString());
+    }
+
     const auto choices = separatorChoices();
     for (const auto& choice : choices) {
         separatorCombo->addItem(colorSwatchIcon(choice.color), choice.displayName, choice.internalName);
     }
-    const int defaultOptionIndex = separatorCombo->count();
-    separatorCombo->addItem(tr("<default: end of list>"), QString());
+    if (!defaultOptionFirst) {
+        defaultOptionIndex = separatorCombo->count();
+        separatorCombo->addItem(defaultSeparatorLabel(), QString());
+    }
+
     auto defaultOptionFont = separatorCombo->font();
     defaultOptionFont.setItalic(true);
     separatorCombo->setItemData(defaultOptionIndex, defaultOptionFont, Qt::FontRole);
@@ -842,16 +886,12 @@ bool InstallToSeparator::decorateDialog(QDialog* dialog) {
 }
 
 QAbstractItemModel* InstallToSeparator::sourceModListModel() const {
-    if (m_MainWindow.isNull()) {
+    auto* view = modListView();
+    if (view == nullptr) {
         return nullptr;
     }
 
-    auto* modListView = m_MainWindow->findChild<QTreeView*>(modListObjectName);
-    if (modListView == nullptr) {
-        return nullptr;
-    }
-
-    auto* model = modListView->model();
+    auto* model = view->model();
     while (auto* proxyModel = qobject_cast<QAbstractProxyModel*>(model)) {
         model = proxyModel->sourceModel();
     }

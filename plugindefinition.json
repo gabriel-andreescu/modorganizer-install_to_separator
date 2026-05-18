@@ -7,6 +7,40 @@
   "NexusUrl": "https://www.nexusmods.com/games/skyrimspecialedition/mods/179707",
   "Versions": [
     {
+      "Version": "0.1.2.0",
+      "Released": "2026-05-18",
+      "MinSupport": "2.5.3",
+      "MaxSupport": "2.5.3",
+      "MinWorking": "2.5.3",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-install_to_separator/releases/download/0.1.2/Install.To.Separator.MO2-2.5.3beta11.zip",
+      "PluginPath": [
+        "install_to_separator.dll"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": [
+        "Fixes separator placement and default picker ordering when MO2's left pane is sorted by descending priority."
+      ]
+    },
+    {
+      "Version": "0.1.2.0",
+      "Released": "2026-05-18",
+      "MinSupport": "2.5.2",
+      "MaxSupport": "2.5.2",
+      "MinWorking": "2.5.2",
+      "MaxWorking": "",
+      "DownloadUrl": "https://github.com/gabriel-andreescu/modorganizer-install_to_separator/releases/download/0.1.2/Install.To.Separator.MO2-2.5.2.zip",
+      "PluginPath": [
+        "install_to_separator.dll"
+      ],
+      "LocalePath": [],
+      "DataPath": [],
+      "ReleaseNotes": [
+        "Fixes separator placement and default picker ordering when MO2's left pane is sorted by descending priority."
+      ]
+    },
+    {
       "Version": "0.1.1.0",
       "Released": "2026-05-14",
       "MinSupport": "2.5.3",

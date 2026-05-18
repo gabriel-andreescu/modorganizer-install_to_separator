@@ -8,7 +8,7 @@ endif ()
 set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "vcpkg target triplet")
 set(VCPKG_MANIFEST_NO_DEFAULT_FEATURES ON CACHE BOOL "Use only default vcpkg manifest dependencies")
 
-set(INSTALL_TO_SEPARATOR_RELEASE_VERSION "0.1.1" CACHE STRING "Install To Separator release version")
+set(INSTALL_TO_SEPARATOR_RELEASE_VERSION "0.1.2" CACHE STRING "Install To Separator release version")
 
 project(install_to_separator VERSION ${INSTALL_TO_SEPARATOR_RELEASE_VERSION})
 
